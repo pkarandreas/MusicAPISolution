@@ -1,28 +1,27 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using MusicAPIV1.Configuration;
-using MusicAPIV1.DTO;
-using MusicAPIV1.Models;
-using MusicAPIV1.Services;
+using MusicAPIV2.Contracts;
+using MusicAPIV2.DTO;
+using MusicAPIV2.Models;
 
-namespace MusicAPIV1.Controllers
+namespace MusicAPIV2.Controllers
 {
     [Route("[controller]")]
     [ApiController]
     public class SongsController : ControllerBase
     {
-        private readonly ISongService srv;
+        private readonly ISongRepository songSrv;
         private readonly IMapper mapper;
-        public SongsController(ISongService _srv, IMapper _mapper)
+        public SongsController(ISongRepository _songSrv,IMapper _mapper)
         {
-            this.srv = _srv;
+            this.songSrv = _songSrv;
             this.mapper = _mapper;
         }
         [HttpGet(Name = "GetAllSongs")]
         public async Task<ActionResult<List<SongDTO>>> GetAllSongs()
         {
-            var result = await srv.GetAllSongs();
+            var result = await this.songSrv.GetAllAsync();
             if (result == null)
                 return NotFound("There are no songs");
             return Ok(this.mapper.Map<List<SongDTO>>(result));
@@ -30,44 +29,57 @@ namespace MusicAPIV1.Controllers
         [HttpGet("ByGroupID/{id}", Name = "GetSongsByGroupID")]
         public async Task<ActionResult<List<SongDTO>?>> GetSongsByGroupID(int id)
         {
-            var results = await this.srv.GetSongsByGroupID(id);
+            var results = await this.songSrv.GetSongsByGroupIDAsync(id);
             if (results == null)
-                return NotFound("No songs found for this group");
+                return Ok(null);
             return Ok(this.mapper.Map<List<SongDTO>>(results));
         }
         [HttpGet("BySongID/{id}", Name = "GetSongByID")]
         public async Task<ActionResult<SongDTO?>> GetSongByID(int id)
         {
-            var result = await this.srv.GetSongByID(id);
+            var result = await this.songSrv.GetByIDAsync(id);
             if (result == null)
-                return NotFound("No songs found");
+                return Ok(null);
             return Ok(this.mapper.Map<SongDTO>(result));
         }
         [HttpPost]
         public async Task<ActionResult<List<SongDTO>>> AddSong(CreateSongDTO _song)
         {
-            var song=this.mapper.Map<Song>(_song);
-            var result = await this.srv.AddSong(song);
+            var song = this.mapper.Map<Song>(_song);
+            var result = await this.songSrv.CreateAsync(song);
             if (result == null)
-                return NotFound("There are no songs");
+                return Ok(null);
             return Ok(this.mapper.Map<List<SongDTO>>(result));
         }
         [HttpDelete("{id}")]
         public async Task<ActionResult<List<SongDTO>?>> DeleteSong(int id)
         {
-            var results = await this.srv.DeleteSong(id);
+            var results = await this.songSrv.DeleteSongAsync(id);
             if (results == null)
                 return Ok(null);
             return Ok(this.mapper.Map<List<SongDTO>>(results));
         }
         [HttpPut("{id}")]
-        public  async Task<ActionResult<List<SongDTO>>> UpdateSong(int id,CreateSongDTO _song)
+        public async Task<ActionResult<List<SongDTO>>> UpdateSong(int id, SongDTO _song)
         {
-            var song = this.mapper.Map<Song>(_song);    
-            var songs = await this.srv.UpdateSong(id,song);
-            if (songs == null) 
-                return NotFound("Song not Found");
+            if (id != _song.Id)
+            {
+                return BadRequest();
+            }
+            var result = await this.songSrv.GetByIDAsync(id);
+            if (result == null)
+            {
+                return Ok(null);
+            }
+            result.songURL = _song.songURL;
+            result.SongName = _song.SongName;
+            result.GroupId = _song.GroupId;
+            result.Id = _song.Id;      
+            var songs = await this.songSrv.UpdateSongAsync(result);
+            if (songs == null)
+                return Ok(null);
             return Ok(this.mapper.Map<List<SongDTO>>(songs));
         }
+
     }
 }

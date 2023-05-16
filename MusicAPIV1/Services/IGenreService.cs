@@ -1,6 +1,6 @@
 ﻿using MusicAPIV1.Models;
 
-namespace MusicAPIV1.Services
+namespace MusicAPIV2.Services
 {
     public interface IGenreService
     {
